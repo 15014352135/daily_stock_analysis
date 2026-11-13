@@ -33,6 +33,7 @@ from api.v1.schemas.history import (
     StockBarItem,
     StockBarResponse,
 )
+from api.v1.schemas.research_artifact import ResearchArtifact
 from api.v1.schemas.common import ErrorResponse
 from api.v1.schemas.run_flow import RunFlowSnapshot
 from src.storage import DatabaseManager
@@ -45,6 +46,7 @@ from src.report_language import (
 )
 from src.services.history_service import HistoryService, MarkdownReportGenerationError
 from src.services.analysis_service import asset_type_from_canonical_code
+from src.services.research_artifact_service import build_research_artifact
 from src.schemas.decision_action import build_action_fields
 from src.utils.data_processing import (
     normalize_model_used,
@@ -671,11 +673,18 @@ def get_history_detail(
             market_structure=market_structure,
         )
         
-        return AnalysisReport(
+        report = AnalysisReport(
             meta=meta,
             summary=summary,
             strategy=strategy,
             details=details
+        )
+        return report.model_copy(
+            update={
+                "structured_report": ResearchArtifact.model_validate(
+                    build_research_artifact(report.model_dump())
+                )
+            }
         )
         
     except HTTPException:

@@ -396,6 +396,7 @@ class StockProfileService:
                 "stock_code": detail.get("stock_code"),
                 "stock_name": detail.get("stock_name"),
                 "created_at": detail.get("created_at"),
+                "current_price": detail.get("current_price"),
             },
             "summary": {
                 "analysis_summary": detail.get("analysis_summary"),
@@ -414,6 +415,7 @@ class StockProfileService:
             "details": {
                 "news_content": detail.get("news_content"),
                 "empty_news_disclosure": detail.get("empty_news_disclosure"),
+                "raw_result": raw_result,
                 "analysis_context_pack_overview": context_overview,
                 "financial_report": detail.get("financial_report")
                 or extracted_fundamental.get("financial_report")

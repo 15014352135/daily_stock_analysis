@@ -25,7 +25,11 @@
 - `invalidation_conditions`：失效条件，至少一条。
 - `next_actions`：下一步动作。
 - `data_quality`：输入质量摘要。
-- `metadata`：低敏扩展字段。
+- `metadata`：低敏扩展字段。自动构建的报告会补充以下确定性快照：
+  - `levels`：四个策略点位的数值化结果，以及 `reference_price`、`risk_reward_ratio`、`status`（`active` / `conditional_watch`）和 `validation`（`ok` / `out_of_range` / `direction_conflict`）。
+  - `position`：基于参考价与止损距离的风险预算仓位上下限；低质量数据、非进攻动作或方向冲突时不会给出可开仓仓位。
+  - `risk_flags`：点位方向、锚点偏移、风险收益比、数据质量、新闻缺失和报告风险提示。
+  - `committee`：从原始结果提取的多智能体分歧、风控覆写和决策路径快照（存在时）。
 
 ## Thesis
 
@@ -77,7 +81,7 @@
 structured_report?: ResearchArtifact | null
 ```
 
-旧报告可以继续不返回该字段；Web 类型和后端 schema 都按可选字段处理。
+旧报告可以继续不返回该字段；Web 类型和后端 schema 都按可选字段处理。同步报告、异步任务状态和历史详情会在响应构建时使用同一 builder 补齐该字段；缺少历史扩展字段时仍按旧报告数据生成兼容产物。
 
 当前 Stock Profile API 会从历史详情动态构建该产物；报告生成时冻结并持久化完整 `structured_report` 仍是后续范围。
 

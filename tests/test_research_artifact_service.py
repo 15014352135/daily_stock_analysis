@@ -87,6 +87,53 @@ def test_build_research_artifact_from_report_with_evidence_and_invalidation() ->
     assert artifact.next_actions[-1].action == "monitor_invalidation"
 
 
+def test_build_research_artifact_projects_grounded_ui_metadata() -> None:
+    artifact = ResearchArtifact.model_validate(build_research_artifact({
+        "meta": {
+            "query_id": "q-grounded",
+            "stock_code": "AAPL",
+            "current_price": 102.0,
+        },
+        "summary": {
+            "action": "buy",
+            "sentiment_score": 80,
+        },
+        "strategy": {
+            "ideal_buy": "100.00元",
+            "secondary_buy": "95.00元",
+            "stop_loss": "92.00元",
+            "take_profit": "120.00元",
+        },
+        "details": {
+            "raw_result": {
+                "dashboard": {
+                    "intelligence": {"risk_alerts": ["News risk"]},
+                    "agent_disagreement_explanation": {
+                        "base_disagreement": {
+                            "type": "bullish_with_neutral",
+                            "agents": [{"agent": "technical", "signal": "buy", "confidence": 0.8}],
+                        },
+                        "risk_control": {"applied": True},
+                        "decision_path": "risk_override",
+                    },
+                },
+            },
+        },
+    }))
+
+    levels = artifact.metadata["levels"]
+    assert levels["ideal_buy"] == 100.0
+    assert levels["reference_price"] == 102.0
+    assert levels["risk_reward_ratio"] == 2.5
+    assert levels["status"] == "active"
+    assert levels["validation"] == "ok"
+    assert artifact.metadata["position"]["max_pct"] > 0
+    assert artifact.metadata["risk_flags"] == [
+        {"code": "report_risk_alert", "severity": "warning", "message": "News risk"},
+    ]
+    assert artifact.metadata["committee"]["risk_control"]["applied"] is True
+
+
 def test_build_research_artifact_always_includes_invalidation_conditions() -> None:
     artifact = ResearchArtifact.model_validate(build_research_artifact({
         "meta": {"query_id": "q-empty", "stock_code": "AAPL"},
