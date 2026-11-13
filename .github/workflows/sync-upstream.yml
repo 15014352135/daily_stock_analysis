@@ -1,0 +1,39 @@
+name: 同步上游更新
+
+on:
+  schedule:
+    - cron: '30 6 * * 1-5'   # 周一到周五 北京时间 14:30，赶在 15:45 分析之前
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 检出本仓库
+        uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.SYNC_TOKEN }}
+          fetch-depth: 0
+
+      - name: 同步上游（保留本地 15:45 定时）
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote add upstream https://github.com/ZhuLinsen/daily_stock_analysis.git
+          git fetch upstream main
+          if git merge upstream/main --no-edit; then
+            echo "合并无冲突"
+          else
+            echo "::warning::合并冲突，自动采用上游版本并重打 15:45 定时补丁"
+            git checkout --theirs .github/workflows/00-daily-analysis.yml || true
+            sed -i "s/cron: '0 10 \* \* 1-5'/cron: '45 7 \* \* 1-5'/" .github/workflows/00-daily-analysis.yml
+            sed -i "s/每天北京时间 18:00 (UTC 10:00)/每天北京时间 15:45 (UTC 07:45)/" .github/workflows/00-daily-analysis.yml
+            sed -i "s/UTC 10:00 = 北京时间 18:00/UTC 07:45 = 北京时间 15:45/" .github/workflows/00-daily-analysis.yml
+            git add -A
+            git commit -m "chore: 同步上游并保留本地 15:45 定时" || exit 0
+          fi
+          git push origin main
