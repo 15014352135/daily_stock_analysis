@@ -27,7 +27,7 @@
 - `data_quality`：输入质量摘要。
 - `metadata`：低敏扩展字段。自动构建的报告会补充以下确定性快照：
   - `levels`：`ideal_buy`、`secondary_buy`、`stop_loss`、`take_profit` 的数值化结果，`reference_price`、`risk_reward_ratio`、`status`（`active` / `conditional_watch`）以及 `validation`（`ok` / `out_of_range` / `direction_conflict`）。原始入场价语义会保留，不会因顺序异常而交换。
-  - `position`：基于参考价与止损距离的风险预算仓位上下限；数据质量会限制上限，非进攻动作、低质量数据或方向冲突返回 0 仓位。`max_pct * stop_distance_pct / 100` 不超过 `risk_budget_pct`。
+  - `position`：基于参考价与止损距离的风险预算仓位上下限；数据质量会限制上限，非进攻动作、低质量数据或方向冲突返回 0 仓位。评分系数调整后，仓位仍受独立风险预算上限约束，再向下取整；使用实际止损距离与展示值中较大者计算上限，确保 `max_pct * stop_distance_pct / 100` 不超过 `risk_budget_pct`。
   - `risk_flags`：点位方向、锚点偏移、风险收益比、数据质量和新闻缺失提醒。
   - `committee`：从原始结果中提取的策略综合与分歧快照（存在时）。
 

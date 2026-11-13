@@ -6,6 +6,8 @@ from __future__ import annotations
 import sys
 from unittest.mock import MagicMock
 
+import pytest
+
 sys.modules.setdefault("litellm", MagicMock())
 
 from api.v1.schemas.history import AnalysisReport, ReportMeta, ReportStrategy, ReportSummary
@@ -110,7 +112,34 @@ def test_compute_atr_position_sizing_never_exceeds_risk_budget_after_rounding() 
     assert position["stop_distance_pct"] * position["max_pct"] / 100 <= position["risk_budget_pct"]
 
 
-def test_analysis_report_auto_populates_structured_report() -> None:
+def test_compute_atr_position_sizing_high_conviction_respects_risk_budget() -> None:
+    position = compute_atr_position_sizing(
+        "buy", 100, {"reference_price": 100.0, "stop_loss": 96.0}, data_quality_level="good"
+    )
+
+    assert position["stop_distance_pct"] == 4.0
+    assert position["max_pct"] == 30
+    assert position["risk_budget_pct"] == 1.2
+
+
+@pytest.mark.parametrize("action", ["buy", "add"])
+@pytest.mark.parametrize("score", [60, 80, 81, 88, 100])
+@pytest.mark.parametrize("quality", ["good", "limited", None])
+@pytest.mark.parametrize("stop_loss", [99.0, 96.0, 94.0, 40.0, 95.8619])
+def test_compute_atr_position_sizing_final_risk_bound(
+    action: str, score: int, quality: str | None, stop_loss: float
+) -> None:
+    position = compute_atr_position_sizing(
+        action, score, {"reference_price": 100.0, "stop_loss": stop_loss}, data_quality_level=quality
+    )
+
+    assert 0 <= position["min_pct"] <= position["max_pct"] <= (20 if quality == "limited" else 35)
+    assert position["max_pct"] * position["stop_distance_pct"] / 100 <= position["risk_budget_pct"]
+    assert position["max_pct"] * (100.0 - stop_loss) / 100 <= position["risk_budget_pct"]
+
+
+@pytest.mark.parametrize("score", [76, 100])
+def test_analysis_report_auto_populates_structured_report(score: int) -> None:
     report = AnalysisReport(
         meta=ReportMeta(
             query_id="q-100",
@@ -124,7 +153,7 @@ def test_analysis_report_auto_populates_structured_report() -> None:
             operation_advice="买入",
             action="buy",
             trend_prediction="看多",
-            sentiment_score=76,
+            sentiment_score=score,
         ),
         strategy=ReportStrategy(
             ideal_buy="1660.0",
@@ -141,3 +170,5 @@ def test_analysis_report_auto_populates_structured_report() -> None:
     assert meta["levels"]["status"] == "active"
     assert meta["levels"]["validation"] == "ok"
     assert meta["position"]["max_pct"] >= 5
+    position = meta["position"]
+    assert position["max_pct"] * position["stop_distance_pct"] / 100 <= position["risk_budget_pct"]

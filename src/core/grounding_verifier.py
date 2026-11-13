@@ -163,7 +163,10 @@ def compute_atr_position_sizing(
 
     base_pct = (_DEFAULT_RISK_BUDGET_PCT / effective_stop_pct) * 100.0 * conviction
     cap = 20.0 if quality == "limited" else 35.0
-    capped_pct = min(base_pct, cap)
+    # Bound both actual and reported stop risk, independently of conviction.
+    budget_stop_pct = max(effective_stop_pct, round(effective_stop_pct, 2))
+    risk_budget_max_pct = (_DEFAULT_RISK_BUDGET_PCT / budget_stop_pct) * 100.0
+    capped_pct = min(base_pct, cap, risk_budget_max_pct)
 
     rounded_max = int(min(int(cap), math.floor(capped_pct)))
     rounded_min = int(max(0, rounded_max - 5))
