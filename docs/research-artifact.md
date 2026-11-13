@@ -25,7 +25,11 @@
 - `invalidation_conditions`：失效条件，至少一条。
 - `next_actions`：下一步动作。
 - `data_quality`：输入质量摘要。
-- `metadata`：低敏扩展字段。
+- `metadata`：低敏扩展字段。自动构建的报告会补充以下确定性快照：
+  - `levels`：`ideal_buy`、`secondary_buy`、`stop_loss`、`take_profit` 的数值化结果，`reference_price`、`risk_reward_ratio`、`status`（`active` / `conditional_watch`）以及 `validation`（`ok` / `out_of_range` / `direction_conflict`）。原始入场价语义会保留，不会因顺序异常而交换。
+  - `position`：基于参考价与止损距离的风险预算仓位上下限；数据质量会限制上限，非进攻动作、低质量数据或方向冲突返回 0 仓位。`max_pct * stop_distance_pct / 100` 不超过 `risk_budget_pct`。
+  - `risk_flags`：点位方向、锚点偏移、风险收益比、数据质量和新闻缺失提醒。
+  - `committee`：从原始结果中提取的策略综合与分歧快照（存在时）。
 
 ## Thesis
 
@@ -77,7 +81,7 @@
 structured_report?: ResearchArtifact | null
 ```
 
-旧报告可以继续不返回该字段；Web 类型和后端 schema 都按可选字段处理。
+旧报告可以继续不返回该字段；Web 类型和后端 schema 都按可选字段处理。非大盘复盘的 `AnalysisReport` 在序列化前会自动构建 `structured_report`；个股研究聚合也会从历史详情复用同一 builder。历史详情中的分析时价格和原始结果会继续传入 builder，因此两条入口使用同一套点位、仓位和委员会快照语义。
 
 当前 Stock Profile API 会从历史详情动态构建该产物；报告生成时冻结并持久化完整 `structured_report` 仍是后续范围。
 

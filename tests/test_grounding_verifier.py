@@ -47,6 +47,26 @@ def test_verify_and_normalize_levels_detects_conflict_and_watch_status() -> None
     assert levels["risk_reward_ratio"] is None
 
 
+def test_verify_and_normalize_levels_preserves_entry_semantics_and_checks_both_entries() -> None:
+    levels = verify_and_normalize_levels(
+        {
+            "ideal_buy": "100",
+            "secondary_buy": "110",
+            "stop_loss": "105",
+            "take_profit": "120",
+        },
+        current_price=100.0,
+        action="buy",
+    )
+
+    assert levels["ideal_buy"] == 100.0
+    assert levels["secondary_buy"] == 110.0
+    assert levels["validation"] == "direction_conflict"
+    position = compute_atr_position_sizing("buy", 80, levels, data_quality_level="good")
+    assert position["max_pct"] == 0
+    assert position["cap_reason"] == "invalid_level_validation"
+
+
 def test_verify_and_normalize_levels_detects_out_of_range_anchor() -> None:
     strategy = {
         "ideal_buy": "60.0",
@@ -75,6 +95,19 @@ def test_compute_atr_position_sizing_caps_and_non_offensive_zero() -> None:
     assert hold_pos["min_pct"] == 0
     assert hold_pos["max_pct"] == 0
     assert hold_pos["cap_reason"] == "non_offensive_action"
+
+
+def test_compute_atr_position_sizing_never_exceeds_risk_budget_after_rounding() -> None:
+    position = compute_atr_position_sizing(
+        "buy",
+        80,
+        {"reference_price": 100.0, "stop_loss": 40.0},
+        data_quality_level="good",
+    )
+
+    assert position["stop_distance_pct"] == 60.0
+    assert position["max_pct"] == 2
+    assert position["stop_distance_pct"] * position["max_pct"] / 100 <= position["risk_budget_pct"]
 
 
 def test_analysis_report_auto_populates_structured_report() -> None:

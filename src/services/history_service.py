@@ -755,6 +755,8 @@ class HistoryService:
             except json.JSONDecodeError:
                 context_snapshot = record.context_snapshot
 
+        history_market_fields = self._extract_history_market_fields(context_snapshot)
+
         report_language = normalize_report_language(
             raw_result.get("report_language") if isinstance(raw_result, dict) else None
         )
@@ -792,6 +794,7 @@ class HistoryService:
             "trend_prediction": record.trend_prediction,
             "sentiment_score": record.sentiment_score,
             "sentiment_label": self._get_sentiment_label(record.sentiment_score or 50),
+            "current_price": history_market_fields["current_price"],
             "ideal_buy": sniper_points.get("ideal_buy"),
             "secondary_buy": sniper_points.get("secondary_buy"),
             "stop_loss": sniper_points.get("stop_loss"),

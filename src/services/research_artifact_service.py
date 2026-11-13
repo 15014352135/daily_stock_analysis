@@ -63,14 +63,13 @@ def build_research_artifact(
 
     artifact_metadata: Dict[str, Any] = {
         "source": "analysis_report",
+        **dict(metadata or {}),
         "levels": levels,
         "position": position,
         "risk_flags": risk_flags,
     }
     if committee is not None:
         artifact_metadata["committee"] = committee
-    if metadata:
-        artifact_metadata.update(dict(metadata))
 
     payload = {
         "artifact_id": artifact_id,

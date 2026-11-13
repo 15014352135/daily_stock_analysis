@@ -56,9 +56,6 @@ def verify_and_normalize_levels(
     normalized_action = str(action or "").strip().lower() or None
     status = "active" if normalized_action in _OFFENSIVE_ACTIONS else "conditional_watch"
 
-    if secondary_buy is not None and ideal_buy is not None and secondary_buy > ideal_buy:
-        ideal_buy, secondary_buy = secondary_buy, ideal_buy
-
     validation = "ok"
     if (
         ideal_buy is not None
@@ -68,6 +65,18 @@ def verify_and_normalize_levels(
         ideal_buy is not None
         and take_profit is not None
         and take_profit <= ideal_buy
+    ) or (
+        secondary_buy is not None
+        and ideal_buy is not None
+        and secondary_buy > ideal_buy
+    ) or (
+        secondary_buy is not None
+        and stop_loss is not None
+        and stop_loss >= secondary_buy
+    ) or (
+        secondary_buy is not None
+        and take_profit is not None
+        and take_profit <= secondary_buy
     ):
         validation = "direction_conflict"
     elif (
@@ -130,6 +139,16 @@ def compute_atr_position_sizing(
             ),
         }
 
+    if levels.get("validation") == "direction_conflict":
+        return {
+            "min_pct": 0,
+            "max_pct": 0,
+            "method": "atr_risk_budget",
+            "stop_distance_pct": None,
+            "risk_budget_pct": _DEFAULT_RISK_BUDGET_PCT,
+            "cap_reason": "invalid_level_validation",
+        }
+
     ref_price = _finite_positive(levels.get("reference_price"))
     stop_loss = _finite_positive(levels.get("stop_loss"))
     if ref_price is not None and stop_loss is not None and ref_price > stop_loss:
@@ -146,8 +165,10 @@ def compute_atr_position_sizing(
     cap = 20.0 if quality == "limited" else 35.0
     capped_pct = min(base_pct, cap)
 
-    rounded_max = int(max(5, min(int(cap), round(capped_pct / 5.0) * 5)))
-    rounded_min = int(max(5, rounded_max - 5))
+    rounded_max = int(min(int(cap), math.floor(capped_pct)))
+    rounded_min = int(max(0, rounded_max - 5))
+    if rounded_max < 5:
+        rounded_min = rounded_max
 
     return {
         "min_pct": rounded_min,
