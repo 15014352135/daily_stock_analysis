@@ -4,6 +4,14 @@ name: 监督员
 # 查岗/补跑使用 GitHub 自带 GITHUB_TOKEN，不依赖个人 PAT。
 on:
   workflow_dispatch:
+    inputs:
+      slot:
+        description: '检查时段（daily 固定为 main）'
+        required: false
+        type: choice
+        default: main
+        options:
+          - main
 
 permissions:
   actions: write      # 需要触发补跑（dispatch 另一个 workflow）
@@ -18,12 +26,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: 检查当天运行并按需补跑
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-          SLOT: main
+          SLOT: ${{ github.event.inputs.slot || 'main' }}
         run: python3 scripts/supervisor.py
 
       - name: 提交监督状态表
