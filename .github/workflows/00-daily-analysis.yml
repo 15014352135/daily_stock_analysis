@@ -65,6 +65,9 @@ jobs:
     needs: guard
     if: needs.guard.outputs.should_run == 'true'
     runs-on: ubuntu-latest
+    # 统一时区为北京时间：报告文件名/报告日期均用北京日期，避免凌晨跑出前一天报告
+    env:
+      TZ: Asia/Shanghai
     # 兼容误将 STOCK_LIST 配到同名 Environment variables 的场景；
     # 推荐位置仍是 Settings -> Secrets and variables -> Actions -> Repository variables。
     environment: STOCK_LIST
